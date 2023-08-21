@@ -13,26 +13,26 @@ DHT dht(dht_dpin, DHTTYPE);
 
 //Conexión a Wifi
 //Nombre de la red Wifi
-const char ssid[] = "CLARO-EAD0";
+const char ssid[] = "ATHENA_2.4G";
 //Contraseña de la red Wifi
-const char pass[] = "Cl4r0@8DEAD0";
+const char pass[] = "11017549D";
 //Usuario uniandes sin @uniandes.edu.co
-#define HOSTNAME "m.ojedan"
+#define HOSTNAME "dj.vargasc1"
 
 //Conexión a Mosquitto
 const char MQTT_HOST[] = "iotlab.virtual.uniandes.edu.co";
 const int MQTT_PORT = 8082;
 //Usuario uniandes sin @uniandes.edu.co
-const char MQTT_USER[] = "m.ojedan";
+const char MQTT_USER[] = "dj.vargasc1";
 //Contraseña de MQTT que recibió por correo
-const char MQTT_PASS[] = "202210187";
+const char MQTT_PASS[] = "202210190";
 const char MQTT_SUB_TOPIC[] = HOSTNAME "/";
 //Tópico al que se enviarán los datos de humedad
-const char MQTT_PUB_TOPIC1[] = "humedad/tunja/" HOSTNAME;
+const char MQTT_PUB_TOPIC1[] = "humedad/san_gil/" HOSTNAME;
 //Tópico al que se enviarán los datos de temperatura
-const char MQTT_PUB_TOPIC2[] = "temperatura/tunja/" HOSTNAME;
+const char MQTT_PUB_TOPIC2[] = "temperatura/san_gil/" HOSTNAME;
 //Tópico al que se enviarán los datos de luminosidad
-const char MQTT_PUB_TOPIC3[] = "luminosidad/tunja/" HOSTNAME;
+const char MQTT_PUB_TOPIC3[] = "luminosidad/san_gil/" HOSTNAME;
 
 //////////////////////////////////////////////////////
 
@@ -78,6 +78,20 @@ void receivedCallback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
 }
+
+const long A = 1000;     //Resistencia en oscuridad en KΩ
+const int B = 15;        //Resistencia a la luz (10 Lux) en KΩ
+const int Rc = 10;       //Resistencia calibracion en KΩ
+
+double Light(int V){
+  int lux = ((long)V*A*10)/((long)B*Rc*(1024-V)); 
+  Serial.print("-> LUX: ");
+  Serial.println(lux);
+
+return lux;
+
+}
+
 
 //Configura la conexión del node MCU a Wifi y a Mosquitto
 void setup()
@@ -175,12 +189,16 @@ void loop()
   now = time(nullptr);
   //Lee los datos del sensor
   float h = dht.readHumidity();
+  delay(100);
   float t = dht.readTemperature();
-  float l = analogRead(fotoSensor);
+  int V = analogRead(fotoSensor);
+  Serial.println(h);
+  Serial.println(t);
+  Serial.println(V);
+
   //Transforma la información a la notación JSON para poder enviar los datos 
   //El mensaje que se envía es de la forma {"value": x}, donde x es el valor de temperatura o humedad
   // Tranforma datos de luminosidad a porcentaje
-  float pl = (l*100)/1024; //donde 0 es el mínimo y 1024 es el máximo
   //JSON para humedad
   String json = "{\"value\": "+ String(h) + "}";
   char payload1[json.length()+1];
@@ -190,18 +208,22 @@ void loop()
   char payload2[json.length()+1];
   json.toCharArray(payload2,json.length()+1);
   //JSON para luminosidad
-  json = "{\"value\": "+ String(pl) + "}";
+  double ilum = Light(V);
+  json = "{\"value\": "+ String(ilum) + "}";
   char payload3[json.length()+1];
   json.toCharArray(payload3,json.length()+1);
 
   //Si los valores recolectados no son indefinidos, se envían a los tópicos correspondientes
-  if ( !isnan(h) && !isnan(t)&& !isnan(pl) ) {
+  if ( !isnan(h) && h<100  && !isnan(t) && t<100 && !isnan(ilum) ) {
     //Publica en el tópico de la humedad
     client.publish(MQTT_PUB_TOPIC1, payload1, false);
     //Publica en el tópico de la temperatura
     client.publish(MQTT_PUB_TOPIC2, payload2, false);
     //Publica en el tópico de la luminosidad
     client.publish(MQTT_PUB_TOPIC3, payload3, false);
+    
+    Serial.println("Published -->");
+
   }
 
   //Imprime en el monitor serial la información recolectada
@@ -214,6 +236,8 @@ void loop()
   Serial.print(MQTT_PUB_TOPIC3);
   Serial.print(" -> ");
   Serial.println(payload3);
+  Serial.println("");
+
   /*Espera 5 segundos antes de volver a ejecutar la función loop*/
-  delay(5000);
+  delay(6000);
 }
