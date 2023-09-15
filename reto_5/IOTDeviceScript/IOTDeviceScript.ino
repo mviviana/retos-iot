@@ -236,6 +236,9 @@ void displayMeasures() {
   display.print("H: ");
   display.print(humi);
   display.println("");
+  display.print("L: ");
+  display.print(lux);
+  display.println("");
 }
 
 /**
