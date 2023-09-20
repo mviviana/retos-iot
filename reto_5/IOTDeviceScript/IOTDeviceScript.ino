@@ -8,7 +8,6 @@
 #include <DHT.h>
 
  
-// Definiciones
 
 // Ancho de la pantalla (en pixeles)
 #define SCREEN_WIDTH 128
@@ -22,8 +21,6 @@
 #define MEASURE_INTERVAL 2
 // Duración aproximada en la pantalla de las alertas que se reciban
 #define ALERT_DURATION 60
-float fotoSensor = A0; //puerto analogico fotoresistor
- 
 
 // Declaraciones
 
@@ -46,18 +43,18 @@ const char ssid[] = "CLARO-EAD0"; // TODO cambiar por el nombre de la red WiFi
 const char pass[] = "Cl4r0@8DEAD0"; // TODO cambiar por la contraseña de la red WiFi
 
 //Conexión a Mosquitto
-#define USER "UsuarioMQTT" // TODO Reemplace UsuarioMQTT por un usuario (no administrador) que haya creado en la configuración del bróker de MQTT.
-const char MQTT_HOST[] = "44.204.172.168"; // TODO Reemplace ip.maquina.mqtt por la IP del bróker MQTT que usted desplegó. Ej: 192.168.0.1
+#define USER "user1" // TODO Reemplace UsuarioMQTT por un usuario (no administrador) que haya creado en la configuración del bróker de MQTT.
+const char MQTT_HOST[] = "18.208.151.182"; // TODO Reemplace ip.maquina.mqtt por la IP del bróker MQTT que usted desplegó. Ej: 192.168.0.1
 const int MQTT_PORT = 8082;
-const char MQTT_USER[] = "admin2";
+const char MQTT_USER[] = USER;
 //Contraseña de MQTT
-const char MQTT_PASS[] = "admin2"; // TODO Reemplace ContrasenaMQTT por la contraseña correpondiente al usuario especificado.
+const char MQTT_PASS[] = "123456"; // TODO Reemplace ContrasenaMQTT por la contraseña correpondiente al usuario especificado.
 
 //Tópico al que se recibirán los datos
 // El tópico de publicación debe tener estructura: <país>/<estado>/<ciudad>/<usuario>/out
-const char MQTT_TOPIC_PUB[] = "colombia/boyaca/tunja/admin/out"; //TODO Reemplace el valor por el tópico de publicación que le corresponde.
+const char MQTT_TOPIC_PUB[] = "colombia/boyaca/tunja/" USER "/out"; //TODO Reemplace el valor por el tópico de publicación que le corresponde.
 // El tópico de suscripción debe tener estructura: <país>/<estado>/<ciudad>/<usuario>/in
-const char MQTT_TOPIC_SUB[] = "colombia/boyaca/tunja/admin/in"; //TODO Reemplace el valor por el tópico de suscripción que le corresponde.
+const char MQTT_TOPIC_SUB[] = "colombia/boyaca/tunja/" USER "/in"; //TODO Reemplace el valor por el tópico de suscripción que le corresponde.
 
 // Declaración de variables globales
 
@@ -73,12 +70,6 @@ String alert = "";
 float temp;
 // Valor de la medición de la humedad
 float humi;
-// Valor de la medición de la luminosidad
-float lux;
-
-const long A = 1000;     //Resistencia en oscuridad en KΩ
-const int B = 15;        //Resistencia a la luz (10 Lux) en KΩ
-const int Rc = 10;       //Resistencia calibracion en KΩ
 
 /**
  * Conecta el dispositivo con el bróker MQTT usando
@@ -118,11 +109,10 @@ void mqtt_connect()
 /**
  * Publica la temperatura y humedad dadas al tópico configurado usando el cliente MQTT.
  */
-void sendSensorData(float temperatura, float humedad, float luminosidad) {
+void sendSensorData(float temperatura, float humedad) {
   String data = "{";
   data += "\"temperatura\": "+ String(temperatura, 1) +", ";
-  data += "\"humedad\": "+ String(humedad, 1)+", ";
-  data += "\"luminosidad\": "+ String(luminosidad, 1);
+  data += "\"humedad\": "+ String(humedad, 1);
   data += "}";
   char payload[data.length()+1];
   data.toCharArray(payload,data.length()+1);
@@ -161,26 +151,13 @@ float readHumedad() {
 }
 
 /**
- * Lee del Fotosensor, la convierte en unidad luminica, la imprime en consola  y la devuelve.
- */
-float readLuminosidad() {
-
-  int v = analogRead(fotoSensor);
-  int lux = ((long)v*A*10)/((long)B*Rc*(1024-v)); 
-  Serial.print("Luminosidad: ");
-  Serial.print(lux);
-  Serial.println(" Lux");
-
-  return lux;
-}
-/**
  * Verifica si las variables ingresadas son números válidos.
  * Si no son números válidos, se imprime un mensaje en consola.
  */
-bool checkMeasures(float t, float h, float l) {
+bool checkMeasures(float t, float h) {
   // Se comprueba si ha habido algún error en la lectura
-    if (isnan(t) || isnan(h)|| isnan(l)) {
-      Serial.println("Error obteniendo los datos de los sensores");
+    if (isnan(t) || isnan(h)) {
+      Serial.println("Error obteniendo los datos del sensor DHT11");
       return false;
     }
     return true;
@@ -236,9 +213,6 @@ void displayMeasures() {
   display.print("H: ");
   display.print(humi);
   display.println("");
-  display.print("L: ");
-  display.print(lux);
-  display.println("");
 }
 
 /**
@@ -251,13 +225,11 @@ void displayMessage(String message) {
   display.println("\nMsg:");
   
   display.setTextSize(2);
-  
+
   if (message.equals("OK")) {
     display.println("    " + message); 
-  } else {
-    display.setTextSize(2);
-    display.println("");
-    display.println("");
+  } else {    
+    display.setTextSize(1);
     display.println(message); 
   }
 }
@@ -437,12 +409,11 @@ void measure() {
     
     temp = readTemperatura();
     humi = readHumedad();
-    lux = readLuminosidad();
 
     // Se chequea si los valores son correctos
-    if (checkMeasures(temp, humi, lux)) {
+    if (checkMeasures(temp, humi)) {
       // Se envían los datos
-      sendSensorData(temp, humi,lux); 
+      sendSensorData(temp, humi); 
     }
   }
 }
