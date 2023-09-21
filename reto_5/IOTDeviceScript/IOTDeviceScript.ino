@@ -21,7 +21,8 @@
 #define MEASURE_INTERVAL 2
 // Duración aproximada en la pantalla de las alertas que se reciban
 #define ALERT_DURATION 60
-
+//led
+#define LED 16
 // Declaraciones
 
 // Sensor DHT
@@ -44,7 +45,7 @@ const char pass[] = "Cl4r0@8DEAD0"; // TODO cambiar por la contraseña de la red
 
 //Conexión a Mosquitto
 #define USER "user1" // TODO Reemplace UsuarioMQTT por un usuario (no administrador) que haya creado en la configuración del bróker de MQTT.
-const char MQTT_HOST[] = "18.208.151.182"; // TODO Reemplace ip.maquina.mqtt por la IP del bróker MQTT que usted desplegó. Ej: 192.168.0.1
+const char MQTT_HOST[] = "3.95.132.98"; // TODO Reemplace ip.maquina.mqtt por la IP del bróker MQTT que usted desplegó. Ej: 192.168.0.1
 const int MQTT_PORT = 8082;
 const char MQTT_USER[] = USER;
 //Contraseña de MQTT
@@ -70,6 +71,7 @@ String alert = "";
 float temp;
 // Valor de la medición de la humedad
 float humi;
+
 
 /**
  * Conecta el dispositivo con el bróker MQTT usando
@@ -228,8 +230,12 @@ void displayMessage(String message) {
 
   if (message.equals("OK")) {
     display.println("    " + message); 
-  } else {    
+    digitalWrite(LED, LOW); 
+  } else {  
     display.setTextSize(1);
+    if (message.equals("ALERT CONTADOR humedad 0 0")){
+      digitalWrite(LED, HIGH); 
+    }
     display.println(message); 
   }
 }
@@ -438,6 +444,9 @@ void setup() {
   setTime();
 
   configureMQTT(); 
+  pinMode(LED, OUTPUT);
+  digitalWrite(LED, LOW); //LED comienza apagado
+
 }
 
 void loop() {
