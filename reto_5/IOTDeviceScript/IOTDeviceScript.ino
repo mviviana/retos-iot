@@ -45,7 +45,7 @@ const char pass[] = "Cl4r0@8DEAD0"; // TODO cambiar por la contraseña de la red
 
 //Conexión a Mosquitto
 #define USER "user1" // TODO Reemplace UsuarioMQTT por un usuario (no administrador) que haya creado en la configuración del bróker de MQTT.
-const char MQTT_HOST[] = "3.95.132.98"; // TODO Reemplace ip.maquina.mqtt por la IP del bróker MQTT que usted desplegó. Ej: 192.168.0.1
+const char MQTT_HOST[] = "54.165.127.70"; // TODO Reemplace ip.maquina.mqtt por la IP del bróker MQTT que usted desplegó. Ej: 192.168.0.1
 const int MQTT_PORT = 8082;
 const char MQTT_USER[] = USER;
 //Contraseña de MQTT
@@ -233,13 +233,27 @@ void displayMessage(String message) {
     digitalWrite(LED, LOW); 
   } else {  
     display.setTextSize(1);
-    if (message.equals("ALERT CONTADOR humedad 0 0")){
-      digitalWrite(LED, HIGH); 
+    if (message.indexOf("ALERTA TRES ALERTAS CONSECUTIVAS TEMPERATURA") != -1) {
+         alarmaLed();
     }
+    if (message.indexOf("ALERTA CUATRO ALERTAS CONSECUTIVAS HUMEDAD") != -1) {
+      alarmaLed(); 
+    }
+    
     display.println(message); 
   }
 }
 
+
+void alarmaLed(){
+    digitalWrite(LED, HIGH); 
+    delay(1000); 
+    digitalWrite(LED, LOW); 
+    delay(500); 
+    digitalWrite(LED, HIGH); 
+    delay(1000); 
+    digitalWrite(LED, LOW); 
+}
 /**
  * Muestra en la pantalla el mensaje de "Connecting to:" 
  * y luego el nombre de la red a la que se conecta.
@@ -286,7 +300,10 @@ void receivedCallback(char* topic, byte* payload, unsigned int length) {
     data += String((char)payload[i]);
   }
   Serial.print(data);
-  if (data.indexOf("ALERT") >= 0) {
+  if (data.indexOf("ALERT") >= 0){
+    alert = data;
+  }
+  if (data.indexOf("ALERTA") >= 0){
     alert = data;
   }
 }
@@ -410,7 +427,7 @@ void configureMQTT() {
  */
 void measure() {
   if ((millis() - measureTime) >= MEASURE_INTERVAL * 1000 ) {
-    Serial.println("\nMidiendo variables...");
+   Serial.println("\nMidiendo variables...");
     measureTime = millis();
     
     temp = readTemperatura();
